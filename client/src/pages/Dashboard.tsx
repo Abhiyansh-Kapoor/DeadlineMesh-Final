@@ -96,7 +96,7 @@ export default function Dashboard() {
     <div className="app-frame">
       <a className="skip-link" href="#main">Skip to main content</a>
       <header className="site-header">
-        <Link className="brand" to="/dashboard" aria-label="DeadlineMesh home"><span className="brand-mark" aria-hidden="true">D</span><span>DeadlineMesh</span></Link>
+        <Link className="brand" to="/dashboard" aria-label="DeadlineMesh home"><span className="brand-mark" aria-hidden="true">▣</span><span>DeadlineMesh.exe</span></Link>
         <nav aria-label="Account"><span className="header-user">{user?.name}</span><button type="button" className="button button-quiet" onClick={logout}>Sign out</button></nav>
       </header>
       <main id="main" className="container">

@@ -27,6 +27,7 @@ export default function Signup() {
 
   return <main className="auth-page">
     <section className="auth-card" aria-labelledby="signup-title">
+      <div className="auth-titlebar">DeadlineMesh.exe · Create account</div>
       <Link className="brand" to="/login"><span className="brand-mark" aria-hidden="true">D</span><span>DeadlineMesh</span></Link>
       <p className="eyebrow">Get started</p>
       <h1 id="signup-title">Create an account</h1>

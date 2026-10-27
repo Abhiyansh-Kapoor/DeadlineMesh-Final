@@ -26,6 +26,7 @@ export default function Login() {
 
   return <main className="auth-page">
     <section className="auth-card" aria-labelledby="login-title">
+      <div className="auth-titlebar">DeadlineMesh.exe · Sign in</div>
       <Link className="brand" to="/login"><span className="brand-mark" aria-hidden="true">D</span><span>DeadlineMesh</span></Link>
       <p className="eyebrow">Welcome back</p>
       <h1 id="login-title">Sign in</h1>

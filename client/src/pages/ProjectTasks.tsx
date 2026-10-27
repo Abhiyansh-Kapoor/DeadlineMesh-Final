@@ -164,7 +164,7 @@ export default function ProjectTasks() {
     <div className="app-frame">
       <a className="skip-link" href="#main">Skip to main content</a>
       <header className="site-header">
-        <Link className="brand" to="/dashboard" aria-label="DeadlineMesh home"><span className="brand-mark" aria-hidden="true">D</span><span>DeadlineMesh</span></Link>
+        <Link className="brand" to="/dashboard" aria-label="DeadlineMesh home"><span className="brand-mark" aria-hidden="true">▣</span><span>DeadlineMesh.exe</span></Link>
         <nav aria-label="Main navigation"><Link className="header-link" to="/dashboard">All projects</Link></nav>
       </header>
       <main id="main" className="container">
