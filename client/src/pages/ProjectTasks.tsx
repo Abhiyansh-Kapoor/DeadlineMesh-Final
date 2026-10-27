@@ -160,6 +160,7 @@ export default function ProjectTasks() {
   const viewStart = timelineMode === "all" ? firstDay : addDays(firstDay, timelinePage * 30);
   const viewEnd = timelineMode === "all" ? lastDay : addDays(viewStart, 30);
   const viewDays = Math.max(1, dayNumber(viewEnd) - dayNumber(viewStart));
+  const timelineWidth = Math.max(1090, viewDays * 220 + 190);
   const ticks = [0, 1, 2, 3, 4].map((index) => addDays(viewStart, Math.round((viewDays - 1) * index / 4)));
 
   return (
@@ -224,12 +225,12 @@ export default function ProjectTasks() {
               <div className="timeline-controls"><label htmlFor="timeline-range">View</label><select id="timeline-range" value={timelineMode} onChange={(event) => { setTimelineMode(event.target.value as "all" | "30 days"); setTimelinePage(0); }}><option value="all">Entire project</option><option value="30 days">30 days at a time</option></select>{timelineMode === "30 days" && <><button type="button" className="button button-quiet" disabled={timelinePage === 0} onClick={() => setTimelinePage((page) => page - 1)}>Previous 30 days</button><button type="button" className="button button-quiet" disabled={timelinePage >= maxPage} onClick={() => setTimelinePage((page) => page + 1)}>Next 30 days</button></>}</div>
               <p className="timeline-dates">Showing {formatDay(viewStart)} to {formatDay(addDays(viewEnd, -1))}</p>
               <div className="timeline" role="group" aria-label="Task timeline">
-                <div className="timeline-row timeline-axis"><span>Task</span><div className="timeline-track">{ticks.map((tick, index) => <span key={index} style={{ left: index * 25 + "%" }}>{formatDay(tick)}</span>)}</div></div>
+                <div className="timeline-row timeline-axis" style={{ minWidth: timelineWidth }}><span>Task</span><div className="timeline-track">{ticks.map((tick, index) => <span key={index} style={{ left: index * 25 + "%" }}>{formatDay(tick)}</span>)}</div></div>
                 {scheduled.map((item) => {
                   const left = Math.max(0, dayNumber(item.start) - dayNumber(viewStart));
                   const right = Math.min(viewDays, dayNumber(item.endExclusive) - dayNumber(viewStart));
                   const visible = right > left;
-                  return <div className="timeline-row" key={item.task.id}><span className="timeline-name">{item.task.name}</span><div className="timeline-track">{visible && <button type="button" className={selectedTaskId === item.task.id ? "timeline-bar selected" : "timeline-bar"} style={{ left: left * 100 / viewDays + "%", width: Math.max(1, (right - left) * 100 / viewDays) + "%" }} onClick={() => setSelectedTaskId(item.task.id)} aria-label={item.task.name + ": " + formatDay(item.start) + " to " + formatDay(item.end)} title={item.task.name + ": " + formatDay(item.start) + " to " + formatDay(item.end)} />}</div></div>;
+                  return <div className="timeline-row" style={{ minWidth: timelineWidth }} key={item.task.id}><span className="timeline-name">{item.task.name}</span><div className="timeline-track">{visible && <button type="button" className={selectedTaskId === item.task.id ? "timeline-bar selected" : "timeline-bar"} style={{ left: left * 100 / viewDays + "%", width: Math.max(1, (right - left) * 100 / viewDays) + "%" }} onClick={() => setSelectedTaskId(item.task.id)} aria-label={item.task.name + ": " + formatDay(item.start) + " to " + formatDay(item.end)} title={item.task.name + ": " + formatDay(item.start) + " to " + formatDay(item.end)} />}</div></div>;
                 })}
               </div>
               {selected && <div className="detail-box"><h3>{selected.name}</h3><p>{scheduled.find((item) => item.task.id === selected.id)?.start && "Scheduled " + formatDay(scheduled.find((item) => item.task.id === selected.id)!.start) + " to " + formatDay(scheduled.find((item) => item.task.id === selected.id)!.end)}. {selected.duration} {selected.duration === 1 ? "day" : "days"}.</p><p>{selected.dependencies.length ? "After " + selected.dependencies.map((id) => byId.get(id)?.name ?? "deleted task").join(", ") : "No prerequisites."}</p></div>}
