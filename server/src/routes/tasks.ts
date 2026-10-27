@@ -401,6 +401,26 @@ router.post(
         return res.status(400).json({ message: dependencyError });
       }
 
+      if (status === "Completed" && dependencies.length > 0) {
+        const incompletePrerequisites = await client.query<{ name: string }>(
+          `SELECT name
+           FROM tasks
+           WHERE id = ANY($1::int[]) AND status <> 'Completed'
+           ORDER BY name`,
+          [dependencies]
+        );
+
+        if (incompletePrerequisites.rowCount) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            message:
+              "Cannot create a completed task until its prerequisites are completed: " +
+              incompletePrerequisites.rows.map((task) => task.name).join(", ") +
+              ".",
+          });
+        }
+      }
+
       for (const dependencyId of dependencies) {
         await client.query(
           `INSERT INTO task_dependencies (task_id, depends_on_task_id)
@@ -567,6 +587,27 @@ router.patch("/:taskId", async (req: AuthRequest, res: Response) => {
     if (dependencyError) {
       await client.query("ROLLBACK");
       return res.status(400).json({ message: dependencyError });
+    }
+
+    if (status === "Completed" && dependencies.length > 0) {
+      const incompletePrerequisites = await client.query<{ name: string }>(
+        `SELECT name
+         FROM tasks
+         WHERE id = ANY($1::int[]) AND status <> 'Completed'
+         ORDER BY name`,
+        [dependencies]
+      );
+
+      if (incompletePrerequisites.rowCount) {
+        await client.query("ROLLBACK");
+        const names = incompletePrerequisites.rows.map((task) => task.name);
+        return res.status(400).json({
+          message:
+            "Cannot complete this task until its prerequisites are completed: " +
+            names.join(", ") +
+            ".",
+        });
+      }
     }
 
     const result = await client.query(

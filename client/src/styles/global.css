@@ -104,6 +104,8 @@ dd { margin: 0; font-weight: 700; }
 .depends { color: #17314e !important; font-weight: 650; }
 .task-actions { min-width: 160px; display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: .5rem; }
 .task-actions label, .task-actions select { grid-column: 1 / -1; }
+.status-hint { display: block; color: #7a1728; font-size: .88rem; line-height: 1.35; }
+.task-actions .status-hint { grid-column: 1 / -1; }
 .task-actions .button { padding: .5rem .7rem; }
 .modal { border: 0; padding: 0; width: min(720px, calc(100vw - 2rem)); max-width: none; max-height: calc(100dvh - 2rem); border-radius: 14px; box-shadow: 0 20px 65px rgba(9,25,43,.32); overflow: hidden; color: #172b45; }
 .modal::backdrop { background: rgba(10, 24, 43, .65); }
