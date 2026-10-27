@@ -136,7 +136,7 @@ dd { margin: 0; font-weight: 700; }
 .timeline-controls label { margin: 0; align-self: center; }
 .timeline-controls select { width: auto; min-width: 180px; }
 .timeline-dates { color: #40536b; margin: 1rem 0; }
-.timeline { display: block; width: max-content; max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #d1dce7; border-radius: 9px; overscroll-behavior-x: contain; }
+.timeline { display: block; width: 100%; max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #d1dce7; border-radius: 9px; overscroll-behavior-x: contain; }
 .timeline-row { display: grid; grid-template-columns: 190px minmax(0, 1fr); min-height: 55px; border-bottom: 1px solid #d1dce7; }
 .timeline-row:last-child { border-bottom: 0; }
 .timeline-row > span { display: flex; align-items: center; padding: .5rem .8rem; border-right: 1px solid #d1dce7; }
