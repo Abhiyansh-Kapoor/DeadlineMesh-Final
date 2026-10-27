@@ -125,6 +125,32 @@ export default function ProjectTasks() {
     }
   }
 
+  function chooseTaskStatus(task: Task, status: TaskStatus) {
+    if (status === "Completed" && task.is_blocked && task.status !== "Completed") {
+      const prerequisites = (task.blocked_by ?? [])
+        .map((id) => byId.get(id)?.name ?? "another prerequisite")
+        .join(", ");
+      setError(`Cannot mark "${task.name}" completed until these prerequisites are completed: ${prerequisites}.`);
+      return;
+    }
+
+    void updateStatus(task, status);
+  }
+
+  function chooseFormStatus(status: TaskStatus) {
+    if (status === "Completed" && formHasIncompletePrerequisites) {
+      const prerequisites = form.dependencies
+        .filter((id) => tasks.some((task) => task.id === id && task.status !== "Completed"))
+        .map((id) => byId.get(id)?.name ?? "another prerequisite")
+        .join(", ");
+      setFormError(`Cannot mark "${form.name || "this task"}" completed until these prerequisites are completed: ${prerequisites}.`);
+      return;
+    }
+
+    setFormError("");
+    setForm({ ...form, status });
+  }
+
   async function removeTask(task: Task) {
     try {
       await apiRequest("/tasks/" + task.id, { method: "DELETE" });
@@ -205,8 +231,7 @@ export default function ProjectTasks() {
                 </div>
                 <div className="task-actions">
                   <label htmlFor={"status-" + task.id}>Status</label>
-                  <select id={"status-" + task.id} value={task.status} onChange={(event) => void updateStatus(task, event.target.value as TaskStatus)}><option>Pending</option><option>In Progress</option><option disabled={Boolean(task.is_blocked && task.status !== "Completed")}>Completed</option></select>
-                  {task.is_blocked && task.status !== "Completed" && <small className="status-hint">Complete prerequisites before completing this task.</small>}
+                  <select id={"status-" + task.id} value={task.status} onChange={(event) => chooseTaskStatus(task, event.target.value as TaskStatus)}><option>Pending</option><option>In Progress</option><option className={task.is_blocked && task.status !== "Completed" ? "option-blocked" : undefined}>Completed</option></select>
                   <button type="button" className="button button-quiet" onClick={() => openEdit(task)}>Edit</button>
                   <button type="button" className="button button-danger-quiet" onClick={() => setDeleteTarget(task)}>Delete</button>
                 </div>
@@ -263,7 +288,7 @@ export default function ProjectTasks() {
             {formError && <div className="message message-error" role="alert"><span>{formError}</span><button type="button" className="message-close" aria-label="Dismiss form error" onClick={() => setFormError("")}>×</button></div>}
             <label htmlFor="task-name">Task name *</label><input id="task-name" autoFocus required maxLength={200} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
             <label htmlFor="task-description">Description</label><textarea id="task-description" rows={3} maxLength={5000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-            <div className="form-grid"><div><label htmlFor="task-duration">Duration in days *</label><input id="task-duration" type="number" required min={1} max={365} step={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} /></div><div><label htmlFor="task-start">Earliest start date *</label><input id="task-start" type="date" required value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} /></div><div><label htmlFor="task-status">Status</label><select id="task-status" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as TaskStatus })}><option>Pending</option><option>In Progress</option><option disabled={formHasIncompletePrerequisites}>Completed</option></select>{formHasIncompletePrerequisites && <small className="status-hint">Complete prerequisites before completing this task.</small>}</div><div><label htmlFor="task-priority">Priority</label><select id="task-priority" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as TaskInput["priority"] })}><option>Low</option><option>Medium</option><option>High</option></select></div></div>
+            <div className="form-grid"><div><label htmlFor="task-duration">Duration in days *</label><input id="task-duration" type="number" required min={1} max={365} step={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} /></div><div><label htmlFor="task-start">Earliest start date *</label><input id="task-start" type="date" required value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} /></div><div><label htmlFor="task-status">Status</label><select id="task-status" value={form.status} onChange={(event) => chooseFormStatus(event.target.value as TaskStatus)}><option>Pending</option><option>In Progress</option><option className={formHasIncompletePrerequisites ? "option-blocked" : undefined}>Completed</option></select></div><div><label htmlFor="task-priority">Priority</label><select id="task-priority" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as TaskInput["priority"] })}><option>Low</option><option>Medium</option><option>High</option></select></div></div>
             <fieldset className="dependency-field"><legend>Prerequisites</legend><p className="form-hint">Select every task that must finish first.</p>{tasks.filter((task) => task.id !== editing?.id).length === 0 ? <p>No other tasks available yet.</p> : <div className="checkbox-list">{tasks.filter((task) => task.id !== editing?.id).map((task) => <label key={task.id}><input type="checkbox" checked={form.dependencies.includes(task.id)} onChange={(event) => setForm({ ...form, dependencies: event.target.checked ? [...form.dependencies, task.id] : form.dependencies.filter((id) => id !== task.id) })} />{task.name}</label>)}</div>}</fieldset>
           </div>
           <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setTaskModalOpen(false)}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Create task"}</button></div>
