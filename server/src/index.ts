@@ -2,6 +2,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "node:fs";
+import path from "node:path";
 import { pool } from "./db/pool";
 import authRoutes from "./routes/auth";
 import projectRoutes from "./routes/projects";
@@ -18,7 +20,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.disable("x-powered-by");
+app.use(express.json({ limit: "1mb" }));
 
 app.use("/api/auth", authRoutes);
 
@@ -53,6 +56,37 @@ app.get("/api/health/db", async (_req, res) => {
       message: "Could not connect to PostgreSQL",
     });
   }
+});
+
+// In production the API and built client share one origin.
+const clientDist = path.resolve(__dirname, "../../client/dist");
+if (fs.existsSync(path.join(clientDist, "index.html"))) {
+  app.use(express.static(clientDist));
+  app.use((req, res, next) => {
+    if (req.method === "GET" && !req.path.startsWith("/api/")) {
+      res.sendFile(path.join(clientDist, "index.html"));
+    } else {
+      next();
+    }
+  });
+}
+
+app.use("/api", (_req, res) => {
+  res.status(404).json({ message: "API endpoint not found." });
+});
+
+app.use((
+  error: Error & { type?: string },
+  _req: express.Request,
+  res: express.Response,
+  _next: express.NextFunction
+) => {
+  if (error.type === "entity.parse.failed") {
+    res.status(400).json({ message: "Request body must be valid JSON." });
+    return;
+  }
+  console.error("Unhandled request error:", error);
+  res.status(500).json({ message: "An unexpected server error occurred." });
 });
 
 app.listen(PORT, () => {

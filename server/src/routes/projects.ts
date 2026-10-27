@@ -43,6 +43,9 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const userId = (req as AuthRequest).userId;
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({ message: "A project form is required." });
+    }
     const { name, description = "", deadline = null } = req.body;
 
     if (typeof name !== "string" || !name.trim() || name.trim().length > 150) {
@@ -86,6 +89,9 @@ router.post("/", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const userId = (req as AuthRequest).userId;
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({ message: "A project form is required." });
+    }
     const id = Number(req.params.id);
 
     if (!Number.isSafeInteger(id) || id < 1) {

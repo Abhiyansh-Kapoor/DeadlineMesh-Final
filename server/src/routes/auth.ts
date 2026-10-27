@@ -24,6 +24,9 @@ function createToken(user: { id: number; email: string }) {
 
 router.post("/signup", async (req, res) => {
   try {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({ message: "Name, email, and password are required." });
+    }
     const { name, email, password } = req.body;
 
     if (
@@ -93,6 +96,9 @@ router.post("/signup", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({ message: "Enter a valid email and password." });
+    }
     const { email, password } = req.body;
 
     if (

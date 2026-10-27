@@ -22,6 +22,7 @@ function isValidId(value: unknown): boolean {
   return (
     (typeof value === "string" || typeof value === "number") &&
     /^\d+$/.test(String(value)) &&
+    Number.isSafeInteger(Number(value)) &&
     Number(value) > 0
   );
 }
@@ -226,7 +227,7 @@ router.get("/project/:projectId", async (req: AuthRequest, res: Response) => {
        LEFT JOIN task_dependencies td ON td.task_id = t.id
        WHERE t.project_id = $1
        GROUP BY t.id
-       ORDER BY t.created_at DESC`,
+       ORDER BY t.id DESC`,
       [projectId]
     );
 
@@ -497,11 +498,7 @@ router.patch("/:taskId", async (req: AuthRequest, res: Response) => {
     const name = req.body.name ?? current.name;
     const description = req.body.description ?? current.description ?? "";
     const duration = req.body.duration ?? current.duration;
-    const startDate = req.body.start_date ?? (
-      current.start_date instanceof Date
-        ? current.start_date.toISOString().slice(0, 10)
-        : String(current.start_date).slice(0, 10)
-    );
+    const startDate = req.body.start_date ?? String(current.start_date).slice(0, 10);
     const status = req.body.status ?? current.status;
     const priority = req.body.priority ?? current.priority;
 

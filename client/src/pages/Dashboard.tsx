@@ -1,569 +1,159 @@
-
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  CalendarDays,
-  Check,
-  CircleAlert,
-  FolderKanban,
-  LogOut,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
+import { formatDay } from "../lib/dates";
+import Modal from "../components/Modal";
 import type { Project } from "../types/project";
 
-type ProjectsResponse = { projects: Project[] };
-type ProjectResponse = { project: Project };
-
-const emptyForm = {
-  name: "",
-  description: "",
-  deadline: "",
-};
-
-function formatDate(date: string | null) {
-  if (!date) return "NO DEADLINE";
-  return new Date(`${date.slice(0, 10)}T12:00:00`).toLocaleDateString(
-    "en-GB",
-    { day: "2-digit", month: "short", year: "numeric" },
-  );
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong.";
-}
+const blank = { name: "", description: "", deadline: "" };
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [search, setSearch] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Project | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState(blank);
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const loadProjects = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    setError("");
-
     try {
-      const data = await apiRequest<ProjectsResponse>("/projects");
-      setProjects(data.projects);
+      const response = await apiRequest<{ projects: Project[] }>("/projects");
+      setProjects(response.projects);
+      setError("");
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(err instanceof Error ? err.message : "Projects could not be loaded.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
+  useEffect(() => { void load(); }, [load]);
 
   function openCreate() {
     setEditing(null);
-    setForm(emptyForm);
-    setNotice("");
+    setForm(blank);
+    setFormError("");
     setModalOpen(true);
   }
 
   function openEdit(project: Project) {
     setEditing(project);
-    setForm({
-      name: project.name,
-      description: project.description ?? "",
-      deadline: project.deadline?.slice(0, 10) ?? "",
-    });
-    setNotice("");
+    setForm({ name: project.name, description: project.description, deadline: project.deadline?.slice(0, 10) ?? "" });
+    setFormError("");
     setModalOpen(true);
   }
 
-  async function saveProject(event: FormEvent<HTMLFormElement>) {
+  async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setError("");
-
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim(),
-      deadline: form.deadline || null,
-    };
-
+    setFormError("");
     try {
-      if (editing) {
-        const data = await apiRequest<ProjectResponse>(
-          `/projects/${editing.id}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify(payload),
-          },
-        );
-
-        setProjects((current) =>
-          current.map((project) =>
-            project.id === editing.id
-              ? { ...project, ...data.project }
-              : project,
-          ),
-        );
-        setNotice("PROJECT UPDATED SUCCESSFULLY");
-      } else {
-        const data = await apiRequest<ProjectResponse>("/projects", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-
-        setProjects((current) => [data.project, ...current]);
-        setNotice("PROJECT CREATED SUCCESSFULLY");
-      }
-
+      const response = await apiRequest<{ project: Project }>(
+        editing ? "/projects/" + editing.id : "/projects",
+        {
+          method: editing ? "PATCH" : "POST",
+          body: JSON.stringify({ name: form.name.trim(), description: form.description.trim(), deadline: form.deadline || null }),
+        }
+      );
       setModalOpen(false);
-      setEditing(null);
-      setForm(emptyForm);
+      setNotice(editing ? "Project updated." : "Project created.");
+      if (editing) {
+        setProjects((items) => items.map((item) => item.id === editing.id ? { ...item, ...response.project } : item));
+      } else {
+        setProjects((items) => [response.project, ...items]);
+      }
     } catch (err) {
-      setError(getErrorMessage(err));
+      setFormError(err instanceof Error ? err.message : "Project could not be saved.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function deleteProject(project: Project) {
-    if (
-      !window.confirm(
-        `Delete "${project.name}" and all its tasks? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
-
-    setError("");
-    setNotice("");
-
+  async function remove(project: Project) {
+    if (!window.confirm('Delete "' + project.name + '" and all its tasks? This cannot be undone.')) return;
     try {
-      await apiRequest<{ message: string }>(`/projects/${project.id}`, {
-        method: "DELETE",
-      });
-
-      setProjects((current) =>
-        current.filter((item) => item.id !== project.id),
-      );
-      setNotice("PROJECT DELETED");
+      await apiRequest("/projects/" + project.id, { method: "DELETE" });
+      setProjects((items) => items.filter((item) => item.id !== project.id));
+      setNotice("Project deleted.");
+      setError("");
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(err instanceof Error ? err.message : "Project could not be deleted.");
     }
   }
 
-  const filteredProjects = projects.filter((project) => {
-    const query = search.trim().toLowerCase();
-    return (
-      !query ||
-      project.name.toLowerCase().includes(query) ||
-      project.description.toLowerCase().includes(query)
-    );
-  });
-
-  const completedTasks = projects.reduce(
-    (sum, project) => sum + Number(project.completed_count ?? 0),
-    0,
-  );
-
-  const totalTasks = projects.reduce(
-    (sum, project) => sum + Number(project.task_count ?? 0),
-    0,
-  );
+  const shown = projects.filter((project) => (project.name + " " + project.description).toLowerCase().includes(query.toLowerCase()));
+  const taskCount = projects.reduce((sum, project) => sum + Number(project.task_count ?? 0), 0);
+  const doneCount = projects.reduce((sum, project) => sum + Number(project.completed_count ?? 0), 0);
 
   return (
-    <main className="workspace">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-icon">DM</div>
-          <div>
-            <strong>DeadlineMesh</strong>
-            <small>PROJECT CONTROL</small>
+    <div className="app-frame">
+      <a className="skip-link" href="#main">Skip to main content</a>
+      <header className="site-header">
+        <Link className="brand" to="/dashboard" aria-label="DeadlineMesh home"><span className="brand-mark" aria-hidden="true">D</span><span>DeadlineMesh</span></Link>
+        <nav aria-label="Account"><span className="header-user">{user?.name}</span><button type="button" className="button button-quiet" onClick={logout}>Sign out</button></nav>
+      </header>
+      <main id="main" className="container">
+        <div className="page-intro">
+          <div><p className="eyebrow">Your workspace</p><h1>Projects</h1><p className="lead">Plan the work, connect the tasks, and see what affects your deadline.</p></div>
+          <button type="button" className="button button-primary" onClick={openCreate}>+ New project</button>
+        </div>
+        {error && <div className="message message-error" role="alert">{error}</div>}
+        {notice && <div className="message message-success" role="status">{notice}</div>}
+        <section className="stats" aria-label="Workspace summary">
+          <div className="stat"><strong>{projects.length}</strong><span>Projects</span></div>
+          <div className="stat"><strong>{taskCount}</strong><span>Total tasks</span></div>
+          <div className="stat"><strong>{doneCount}</strong><span>Completed tasks</span></div>
+        </section>
+        <section className="panel" aria-labelledby="project-list-title">
+          <div className="panel-header">
+            <div><h2 id="project-list-title">Your projects</h2><p>Choose a project to see its tasks and schedule.</p></div>
+            <button type="button" className="button button-quiet" onClick={() => void load()} disabled={loading}>Refresh</button>
           </div>
-        </div>
-
-        <div className="sidebar-label">WORKSPACE</div>
-        <div className="nav-item nav-item-active">
-          <FolderKanban size={17} />
-          <span>Projects</span>
-          <span className="nav-count">{projects.length}</span>
-        </div>
-        <div className="nav-item nav-item-disabled">
-          <span className="nav-symbol">◇</span>
-          <span>Task Graph</span>
-          <span className="nav-tag">SOON</span>
-        </div>
-        <div className="nav-item nav-item-disabled">
-          <CalendarDays size={17} />
-          <span>Timeline</span>
-          <span className="nav-tag">SOON</span>
-        </div>
-        <div className="nav-item nav-item-disabled">
-          <span className="nav-symbol">⌁</span>
-          <span>Critical Path</span>
-        </div>
-        <div className="nav-item nav-item-disabled">
-          <span className="nav-symbol">◷</span>
-          <span>Simulations</span>
-        </div>
-
-        <div className="sidebar-bottom">
-          <div className="system-status">
-            <span className="status-dot" />
-            API CONNECTION ACTIVE
-          </div>
-          <div className="user-card">
-            <div className="user-avatar">
-              {(user?.name?.[0] ?? "U").toUpperCase()}
-            </div>
-            <div className="user-info">
-              <strong>{user?.name}</strong>
-              <small>{user?.email}</small>
-            </div>
-            <button
-              type="button"
-              className="icon-button"
-              title="Sign out"
-              aria-label="Sign out"
-              onClick={logout}
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <section className="main-area">
-        <header className="topbar">
-          <div className="breadcrumbs">
-            <span>WORKSPACE</span>
-            <span>/</span>
-            <strong>PROJECTS</strong>
-          </div>
-          <div className="system-clock">
-            <span className="status-dot" /> SYSTEM ONLINE
-          </div>
-        </header>
-
-        <div className="dashboard-main">
-          <div className="page-heading">
-            <div>
-              <p className="eyebrow">DEADLINEMESH / OVERVIEW</p>
-              <h1>Project control.</h1>
-              <p className="muted">
-                Every task connected. Every deadline accounted for.
-              </p>
-            </div>
-
-            <button type="button" onClick={openCreate}>
-              <Plus size={17} /> NEW PROJECT
-            </button>
-          </div>
-
-          {error && (
-            <div className="notice notice-error" role="alert">
-              <CircleAlert size={17} />
-              <span>{error}</span>
-              <button
-                type="button"
-                className="notice-close"
-                onClick={() => setError("")}
-                aria-label="Dismiss error"
-              >
-                <X size={16} />
-              </button>
-            </div>
+          <label className="search-label" htmlFor="project-search">Search projects</label>
+          <input id="project-search" type="search" placeholder="Search by name or description" value={query} onChange={(event) => setQuery(event.target.value)} />
+          {loading ? <p className="empty-state" role="status">Loading projects…</p> : shown.length === 0 ? (
+            <div className="empty-state"><h3>{query ? "No matching projects" : "No projects yet"}</h3><p>{query ? "Try a different search." : "Create a project to get started."}</p></div>
+          ) : (
+            <ul className="project-grid">
+              {shown.map((project) => {
+                const total = Number(project.task_count ?? 0);
+                const completed = Number(project.completed_count ?? 0);
+                const progress = total ? Math.round(completed * 100 / total) : 0;
+                return <li className="project-card" key={project.id}>
+                  <div className="project-card-top"><h3><Link to={"/projects/" + project.id}>{project.name}</Link></h3><span className="badge badge-blue">{progress}% complete</span></div>
+                  <p>{project.description || "No description added."}</p>
+                  <div className="progress" role="progressbar" aria-label={project.name + " completion"} aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: progress + "%" }} /></div>
+                  <dl className="project-meta"><div><dt>Deadline</dt><dd>{formatDay(project.deadline)}</dd></div><div><dt>Tasks</dt><dd>{completed} of {total} complete</dd></div></dl>
+                  <div className="card-actions"><Link className="button button-primary" to={"/projects/" + project.id}>Open project</Link><button type="button" className="button button-quiet" onClick={() => openEdit(project)}>Edit</button><button type="button" className="button button-danger-quiet" onClick={() => void remove(project)}>Delete</button></div>
+                </li>;
+              })}
+            </ul>
           )}
-
-          {notice && (
-            <div className="notice notice-success" role="status">
-              <Check size={17} />
-              {notice}
-              <button
-                type="button"
-                className="notice-close"
-                onClick={() => setNotice("")}
-                aria-label="Dismiss notice"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
-
-          <section className="stats-grid">
-            <article className="stat-panel">
-              <span className="stat-label">TOTAL PROJECTS</span>
-              <strong>{projects.length.toString().padStart(2, "0")}</strong>
-              <small>IN YOUR WORKSPACE</small>
-            </article>
-            <article className="stat-panel">
-              <span className="stat-label">TOTAL TASKS</span>
-              <strong>{totalTasks.toString().padStart(2, "0")}</strong>
-              <small>ACROSS ALL PROJECTS</small>
-            </article>
-            <article className="stat-panel">
-              <span className="stat-label">TASKS COMPLETED</span>
-              <strong>{completedTasks.toString().padStart(2, "0")}</strong>
-              <small>
-                {totalTasks
-                  ? `${Math.round((completedTasks / totalTasks) * 100)}% COMPLETION`
-                  : "NO TASKS RECORDED"}
-              </small>
-            </article>
-          </section>
-
-          <section className="projects-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">DIRECTORY / 01</p>
-                <h2>Your projects</h2>
-              </div>
-              <span className="record-count">
-                {filteredProjects.length} RECORDS
-              </span>
-            </div>
-
-            <div className="project-toolbar">
-              <div className="search-field">
-                <Search size={17} />
-                <input
-                  type="search"
-                  placeholder="Search projects..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  aria-label="Search projects"
-                />
-                <kbd>CTRL F</kbd>
-              </div>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void loadProjects()}
-                disabled={loading}
-              >
-                {loading ? "LOADING..." : "↻ REFRESH"}
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="empty-state">READING PROJECT DATABASE...</div>
-            ) : filteredProjects.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <FolderKanban size={25} />
-                </div>
-                <h3>{search ? "NO MATCHING PROJECTS" : "NO PROJECTS FOUND"}</h3>
-                <p>
-                  {search
-                    ? "Try a different search term."
-                    : "Create your first project to start mapping its deadlines."}
-                </p>
-                {!search && (
-                  <button type="button" onClick={openCreate}>
-                    <Plus size={16} /> CREATE FIRST PROJECT
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="project-list">
-                {filteredProjects.map((project, index) => {
-                  const taskCount = Number(project.task_count ?? 0);
-                  const done = Number(project.completed_count ?? 0);
-                  const progress = taskCount
-                    ? Math.round((done / taskCount) * 100)
-                    : 0;
-
-                  return (
-                    <article
-                      className="project-card"
-                      key={project.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open tasks for ${project.name}`}
-                      onClick={() => navigate(`/projects/${project.id}`)}
-                      onKeyDown={(event) => {
-                        if (event.target !== event.currentTarget) return;
-
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          navigate(`/projects/${project.id}`);
-                        }
-                      }}
-                    >
-                      <div className="project-index">
-                        {(index + 1).toString().padStart(2, "0")}
-                      </div>
-
-                      <div className="project-card-main">
-                        <div className="project-card-heading">
-                          <h3>{project.name}</h3>
-                          <span className="project-id">ID: {project.id}</span>
-                        </div>
-                        <p className="project-description">
-                          {project.description || "NO DESCRIPTION PROVIDED"}
-                        </p>
-
-                        <div className="project-progress">
-                          <div className="progress-track">
-                            <div
-                              className="progress-fill"
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                          <span>{progress}%</span>
-                        </div>
-
-                        <div className="project-meta">
-                          <span>
-                            <CalendarDays size={14} />
-                            {formatDate(project.deadline)}
-                          </span>
-                          <span>{taskCount} TASKS</span>
-                          <span>{done} COMPLETED</span>
-                        </div>
-                      </div>
-
-                      <div
-                        className="project-actions"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="icon-button"
-                          title="Edit project"
-                          aria-label={`Edit ${project.name}`}
-                          onClick={() => openEdit(project)}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-button danger-button"
-                          title="Delete project"
-                          aria-label={`Delete ${project.name}`}
-                          onClick={() => void deleteProject(project)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          <footer className="dashboard-footer">
-            <span>DEADLINEMESH BUILD 0.1.0</span>
-            <span>POSTGRESQL / EXPRESS / REACT</span>
-          </footer>
-        </div>
-      </section>
-
-      {modalOpen && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !saving) {
-              setModalOpen(false);
-            }
-          }}
-        >
-          <section
-            className="project-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="project-modal-title"
-          >
-            <header className="window-titlebar">
-              <span>{editing ? "EDIT_PROJECT.exe" : "NEW_PROJECT.exe"}</span>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close modal"
-                onClick={() => setModalOpen(false)}
-                disabled={saving}
-              >
-                <X size={17} />
-              </button>
-            </header>
-
-            <form onSubmit={saveProject} className="project-form">
-              <p className="eyebrow">PROJECT CONFIGURATION / 01</p>
-              <h2 id="project-modal-title">
-                {editing ? "Edit project." : "Create a project."}
-              </h2>
-
-              <label>
-                PROJECT NAME *
-                <input
-                  autoFocus
-                  maxLength={150}
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm({ ...form, name: event.target.value })
-                  }
-                  placeholder="e.g. Semester project"
-                  required
-                />
-              </label>
-
-              <label>
-                DESCRIPTION
-                <textarea
-                  maxLength={5000}
-                  rows={3}
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm({ ...form, description: event.target.value })
-                  }
-                  placeholder="What are you working towards?"
-                />
-              </label>
-
-              <label>
-                TARGET DEADLINE
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(event) =>
-                    setForm({ ...form, deadline: event.target.value })
-                  }
-                />
-              </label>
-
-              <div className="form-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setModalOpen(false)}
-                  disabled={saving}
-                >
-                  CANCEL
-                </button>
-                <button type="submit" disabled={saving}>
-                  {saving
-                    ? "SAVING..."
-                    : editing
-                      ? "SAVE CHANGES"
-                      : "CREATE PROJECT →"}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-    </main>
+        </section>
+      </main>
+      <footer className="site-footer">DeadlineMesh · Project scheduling</footer>
+      {modalOpen && <Modal title={editing ? "Edit project" : "Create project"} onClose={() => setModalOpen(false)}>
+        <form onSubmit={save} className="modal-form">
+          <div className="modal-body">
+            <p className="form-hint">Fields marked * are required.</p>
+            {formError && <div className="message message-error" role="alert">{formError}</div>}
+            <label htmlFor="project-name">Project name *</label>
+            <input id="project-name" autoFocus required maxLength={150} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+            <label htmlFor="project-description">Description</label>
+            <textarea id="project-description" rows={3} maxLength={5000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+            <label htmlFor="project-deadline">Target deadline</label>
+            <input id="project-deadline" type="date" value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} />
+          </div>
+          <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModalOpen(false)}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Create project"}</button></div>
+        </form>
+      </Modal>}
+    </div>
   );
 }
