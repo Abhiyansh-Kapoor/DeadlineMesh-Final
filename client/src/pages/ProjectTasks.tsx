@@ -176,8 +176,8 @@ export default function ProjectTasks() {
             <div><p className="eyebrow">Project workspace</p><h1>{project.name}</h1><p className="lead">{project.description || "Plan and track this project's work."}</p><p className="deadline">Target deadline: <strong>{formatDay(project.deadline)}</strong></p></div>
             <button type="button" className="button button-primary" onClick={openCreate}>+ New task</button>
           </div>
-          {error && <div className="message message-error" role="alert">{error}</div>}
-          {notice && <div className="message message-success" role="status">{notice}</div>}
+          {error && <div className="message message-error" role="alert"><span>{error}</span><button type="button" className="message-close" aria-label="Dismiss error" onClick={() => setError("")}>×</button></div>}
+          {notice && <div className="message message-success" role="status"><span>{notice}</span><button type="button" className="message-close" aria-label="Dismiss notice" onClick={() => setNotice("")}>×</button></div>}
           <section className="stats" aria-label="Project summary">
             <div className="stat"><strong>{tasks.length}</strong><span>Tasks</span></div>
             <div className="stat"><strong>{progress}%</strong><span>Complete</span></div>
@@ -209,7 +209,7 @@ export default function ProjectTasks() {
           </section>}
 
           {section === "dependencies" && <section className="panel" aria-labelledby="dependencies-title">
-            <div className="panel-header"><div><h2 id="dependencies-title">Task dependencies</h2><p>Work flows from prerequisites on the left to dependent tasks on the right. Select a task for details.</p></div></div>
+            <div className="panel-header"><div><h2 id="dependencies-title">Task dependencies</h2></div></div>
             {tasks.length === 0 ? <p className="empty-state">Add tasks to build a dependency map.</p> : <>
               <div className="dependency-map" style={{ gridTemplateColumns: "repeat(" + (Math.max(...scheduled.map((item) => item.level)) + 1) + ", minmax(190px, 1fr))" }}>
                 {Array.from({ length: Math.max(...scheduled.map((item) => item.level)) + 1 }, (_, level) => <div className="dependency-column" key={level}><h3>{level === 0 ? "Start" : "Step " + (level + 1)}</h3>{scheduled.filter((item) => item.level === level).map(({ task }) => <button type="button" className={selectedTaskId === task.id ? "dependency-node selected" : "dependency-node"} key={task.id} aria-pressed={selectedTaskId === task.id} onClick={() => setSelectedTaskId(task.id)}><strong>{task.name}</strong><span>{task.duration} {task.duration === 1 ? "day" : "days"} · {task.status}</span><small>{task.dependencies.length ? "After " + task.dependencies.map((id) => byId.get(id)?.name ?? "deleted task").join(", ") : "No prerequisites"}</small></button>)}</div>)}
@@ -254,7 +254,7 @@ export default function ProjectTasks() {
         <form className="modal-form" onSubmit={saveTask}>
           <div className="modal-body">
             <p className="form-hint">Fields marked * are required. A prerequisite must finish before this task can start.</p>
-            {formError && <div className="message message-error" role="alert">{formError}</div>}
+            {formError && <div className="message message-error" role="alert"><span>{formError}</span><button type="button" className="message-close" aria-label="Dismiss form error" onClick={() => setFormError("")}>×</button></div>}
             <label htmlFor="task-name">Task name *</label><input id="task-name" autoFocus required maxLength={200} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
             <label htmlFor="task-description">Description</label><textarea id="task-description" rows={3} maxLength={5000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
             <div className="form-grid"><div><label htmlFor="task-duration">Duration in days *</label><input id="task-duration" type="number" required min={1} max={365} step={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} /></div><div><label htmlFor="task-start">Earliest start date *</label><input id="task-start" type="date" required value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} /></div><div><label htmlFor="task-status">Status</label><select id="task-status" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as TaskStatus })}><option>Pending</option><option>In Progress</option><option>Completed</option></select></div><div><label htmlFor="task-priority">Priority</label><select id="task-priority" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as TaskInput["priority"] })}><option>Low</option><option>Medium</option><option>High</option></select></div></div>

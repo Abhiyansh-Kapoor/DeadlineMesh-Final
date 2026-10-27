@@ -32,7 +32,7 @@ export default function Login() {
       <h1 id="login-title">Sign in</h1>
       <p className="lead">Keep every task and deadline in view.</p>
       <form className="auth-form" onSubmit={submit}>
-        {error && <div className="message message-error" role="alert">{error}</div>}
+        {error && <div className="message message-error" role="alert"><span>{error}</span><button type="button" className="message-close" aria-label="Dismiss error" onClick={() => setError("")}>×</button></div>}
         <label htmlFor="login-email">Email address</label>
         <input id="login-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
         <label htmlFor="login-password">Password</label>

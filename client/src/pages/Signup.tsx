@@ -34,7 +34,7 @@ export default function Signup() {
       <p className="lead">Build a clearer plan for your project.</p>
       <form className="auth-form" onSubmit={submit}>
         <p className="form-hint">All fields are required. Use a password of 8–72 characters.</p>
-        {error && <div className="message message-error" role="alert">{error}</div>}
+        {error && <div className="message message-error" role="alert"><span>{error}</span><button type="button" className="message-close" aria-label="Dismiss error" onClick={() => setError("")}>×</button></div>}
         <label htmlFor="signup-name">Full name *</label>
         <input id="signup-name" autoComplete="name" required minLength={2} maxLength={100} value={name} onChange={(event) => setName(event.target.value)} />
         <label htmlFor="signup-email">Email address *</label>

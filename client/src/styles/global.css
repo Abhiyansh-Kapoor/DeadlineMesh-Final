@@ -48,7 +48,9 @@ p { margin: .45rem 0; }
 .button-danger-quiet:hover { background: #fff2f3; }
 .site-header .button-quiet { color: #fff; background: transparent; border-color: #a6bdd2; }
 .site-header .button-quiet:hover { background: #244566; }
-.message { padding: .9rem 1rem; border: 1px solid; border-radius: 9px; margin: 1rem 0; font-weight: 600; }
+.message { padding: .9rem 1rem; border: 1px solid; border-radius: 9px; margin: 1rem 0; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.message-close { flex: 0 0 auto; min-width: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: inherit; font-size: 1.35rem; line-height: 1; box-shadow: none; }
+.message-close:hover { background: rgba(0,0,0,.1); }
 .message-error { background: #fff1f2; border-color: #bd3d52; color: #86162a; }
 .message-success { background: #e8f7ef; border-color: #388361; color: #155638; }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
@@ -122,7 +124,8 @@ dd { margin: 0; font-weight: 700; }
 .checkbox-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; max-height: 170px; overflow-y: auto; }
 .checkbox-list label { display: flex; gap: .5rem; align-items: center; font-weight: 500; margin: 0; }
 .checkbox-list input { width: 20px; min-height: 20px; height: 20px; accent-color: #07549a; }
-.dependency-map { display: grid; gap: .85rem; overflow-x: auto; padding-bottom: .7rem; }
+.dependency-map { display: grid; gap: .85rem; overflow-x: auto; overflow-y: visible; padding: .25rem .25rem .9rem; min-width: 0; }
+.dependency-map > .dependency-column { min-width: 190px; }
 .dependency-column { min-width: 190px; display: flex; flex-direction: column; gap: .65rem; padding: .7rem; border-radius: 10px; background: #f0f5fa; }
 .dependency-column h3 { color: #40536b; font-size: 1rem; }
 .dependency-node { width: 100%; padding: .8rem; text-align: left; border: 1px solid #9ab6d0; border-left: 5px solid #07549a; border-radius: 8px; background: #fff; color: #172b45; display: flex; flex-direction: column; gap: .2rem; }

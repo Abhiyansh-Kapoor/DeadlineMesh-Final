@@ -106,8 +106,8 @@ export default function Dashboard() {
           <div><p className="eyebrow">Your workspace</p><h1>Projects</h1><p className="lead">Plan the work, connect the tasks, and see what affects your deadline.</p></div>
           <button type="button" className="button button-primary" onClick={openCreate}>+ New project</button>
         </div>
-        {error && <div className="message message-error" role="alert">{error}</div>}
-        {notice && <div className="message message-success" role="status">{notice}</div>}
+        {error && <div className="message message-error" role="alert"><span>{error}</span><button type="button" className="message-close" aria-label="Dismiss error" onClick={() => setError("")}>×</button></div>}
+        {notice && <div className="message message-success" role="status"><span>{notice}</span><button type="button" className="message-close" aria-label="Dismiss notice" onClick={() => setNotice("")}>×</button></div>}
         <section className="stats" aria-label="Workspace summary">
           <div className="stat"><strong>{projects.length}</strong><span>Projects</span></div>
           <div className="stat"><strong>{taskCount}</strong><span>Total tasks</span></div>
@@ -145,7 +145,7 @@ export default function Dashboard() {
         <form onSubmit={save} className="modal-form">
           <div className="modal-body">
             <p className="form-hint">Fields marked * are required.</p>
-            {formError && <div className="message message-error" role="alert">{formError}</div>}
+            {formError && <div className="message message-error" role="alert"><span>{formError}</span><button type="button" className="message-close" aria-label="Dismiss form error" onClick={() => setFormError("")}>×</button></div>}
             <label htmlFor="project-name">Project name *</label>
             <input id="project-name" autoFocus required maxLength={150} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
             <label htmlFor="project-description">Description</label>
