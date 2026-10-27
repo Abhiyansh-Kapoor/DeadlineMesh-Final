@@ -42,6 +42,7 @@ export default function ProjectTasks() {
   const [simulationDays, setSimulationDays] = useState("1");
   const [simulation, setSimulation] = useState<WhatIfSimulationResult | null>(null);
   const [simulating, setSimulating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -122,7 +123,6 @@ export default function ProjectTasks() {
   }
 
   async function removeTask(task: Task) {
-    if (!window.confirm('Delete "' + task.name + '"? This cannot be undone.')) return;
     try {
       await apiRequest("/tasks/" + task.id, { method: "DELETE" });
       setNotice("Task deleted.");
@@ -130,6 +130,8 @@ export default function ProjectTasks() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Task could not be deleted.");
+    } finally {
+      setDeleteTarget(null);
     }
   }
 
@@ -200,7 +202,7 @@ export default function ProjectTasks() {
                   <label htmlFor={"status-" + task.id}>Status</label>
                   <select id={"status-" + task.id} value={task.status} onChange={(event) => void updateStatus(task, event.target.value as TaskStatus)}><option>Pending</option><option>In Progress</option><option>Completed</option></select>
                   <button type="button" className="button button-quiet" onClick={() => openEdit(task)}>Edit</button>
-                  <button type="button" className="button button-danger-quiet" onClick={() => void removeTask(task)}>Delete</button>
+                  <button type="button" className="button button-danger-quiet" onClick={() => setDeleteTarget(task)}>Delete</button>
                 </div>
               </li>)}
             </ul>}
@@ -260,6 +262,10 @@ export default function ProjectTasks() {
           </div>
           <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setTaskModalOpen(false)}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Create task"}</button></div>
         </form>
+      </Modal>}
+      {deleteTarget && <Modal title="Delete task?" onClose={() => setDeleteTarget(null)}>
+        <div className="modal-body"><div className="message message-error"><strong>{deleteTarget.name}</strong> will be permanently deleted.</div><p>Any dependency links involving this task will also be removed. This action cannot be undone.</p></div>
+        <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setDeleteTarget(null)}>Cancel</button><button type="button" className="button button-danger-quiet" onClick={() => void removeTask(deleteTarget)}>Delete task</button></div>
       </Modal>}
     </div>
   );

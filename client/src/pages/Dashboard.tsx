@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [form, setForm] = useState(blank);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,7 +78,6 @@ export default function Dashboard() {
   }
 
   async function remove(project: Project) {
-    if (!window.confirm('Delete "' + project.name + '" and all its tasks? This cannot be undone.')) return;
     try {
       await apiRequest("/projects/" + project.id, { method: "DELETE" });
       setProjects((items) => items.filter((item) => item.id !== project.id));
@@ -85,6 +85,8 @@ export default function Dashboard() {
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Project could not be deleted.");
+    } finally {
+      setDeleteTarget(null);
     }
   }
 
@@ -131,7 +133,7 @@ export default function Dashboard() {
                   <p>{project.description || "No description added."}</p>
                   <div className="progress" role="progressbar" aria-label={project.name + " completion"} aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: progress + "%" }} /></div>
                   <dl className="project-meta"><div><dt>Deadline</dt><dd>{formatDay(project.deadline)}</dd></div><div><dt>Tasks</dt><dd>{completed} of {total} complete</dd></div></dl>
-                  <div className="card-actions"><Link className="button button-primary" to={"/projects/" + project.id}>Open project</Link><button type="button" className="button button-quiet" onClick={() => openEdit(project)}>Edit</button><button type="button" className="button button-danger-quiet" onClick={() => void remove(project)}>Delete</button></div>
+                  <div className="card-actions"><Link className="button button-primary" to={"/projects/" + project.id}>Open project</Link><button type="button" className="button button-quiet" onClick={() => openEdit(project)}>Edit</button><button type="button" className="button button-danger-quiet" onClick={() => setDeleteTarget(project)}>Delete</button></div>
                 </li>;
               })}
             </ul>
@@ -153,6 +155,10 @@ export default function Dashboard() {
           </div>
           <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModalOpen(false)}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Create project"}</button></div>
         </form>
+      </Modal>}
+      {deleteTarget && <Modal title="Delete project?" onClose={() => setDeleteTarget(null)}>
+        <div className="modal-body"><div className="message message-error"><strong>{deleteTarget.name}</strong> and all of its tasks will be permanently deleted.</div><p>This action cannot be undone. Are you sure you want to continue?</p></div>
+        <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setDeleteTarget(null)}>Cancel</button><button type="button" className="button button-danger-quiet" onClick={() => void remove(deleteTarget)}>Delete project</button></div>
       </Modal>}
     </div>
   );
